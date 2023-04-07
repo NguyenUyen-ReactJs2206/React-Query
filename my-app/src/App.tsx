@@ -5,6 +5,8 @@ import AddStudent from './pages/AddStudent'
 import About from './pages/About'
 import NotFound from './pages/NotFound'
 import MainLayout from './layouts/MainLayout'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 function App() {
   const elements = useRoutes([
@@ -36,6 +38,7 @@ function App() {
 
   return (
     <div className='App'>
+      <ToastContainer />
       <MainLayout>{elements}</MainLayout>
     </div>
   )

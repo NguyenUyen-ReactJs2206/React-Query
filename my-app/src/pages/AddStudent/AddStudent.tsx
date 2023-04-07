@@ -1,12 +1,13 @@
-import { useMatch } from 'react-router-dom'
-import { useMutation } from 'react-query'
+import { useMatch, useParams } from 'react-router-dom'
+import { useMutation, useQuery } from 'react-query'
 import http from '../../utils/http'
-import { addStudent } from '../../apis/students.api'
+import { addStudent, getStudent, updateStudent } from '../../apis/students.api'
 import { Student } from '../../types/students.type'
 import { useMemo, useState } from 'react'
 import { isAxiosError } from '../../utils/utils'
+import { toast } from 'react-toastify'
 
-type FormStateType = Omit<Student, 'id'>
+type FormStateType = Omit<Student, 'id'> | Student
 const initialFormState: FormStateType = {
   first_name: '',
   last_name: '',
@@ -28,45 +29,75 @@ export default function AddStudent() {
   const addMatch = useMatch('/students/add')
   const isAddMode = Boolean(addMatch)
 
-  const { mutate, error, data, reset, mutateAsync } = useMutation({
+  const { id } = useParams()
+
+  const addStudentMutation = useMutation({
     mutationFn: (body: FormStateType) => {
       return addStudent(body)
     }
   })
+
+  //start edit
+  useQuery({
+    queryKey: ['student', id],
+    queryFn: () => getStudent(id as string),
+    //khi id co data thi query dc goi
+    enabled: id !== undefined,
+    onSuccess: (data) => {
+      setFormState(data.data)
+    }
+  })
+
+  //update
+  const updateStateMutation = useMutation({
+    mutationFn: (_) => updateStudent(id as string, formState as Student)
+  })
+
   // sd useMemo de han che viec tinh toan di tinh toan lai
   const errorForm: FormError = useMemo(() => {
+    const error = isAddMode ? addStudentMutation.error : updateStateMutation.error
     if (isAxiosError<{ error: FormError }>(error) && error.response?.status === 422) {
       return error.response?.data.error
     }
     return null
-  }, [error])
+  }, [addStudentMutation.error, isAddMode, updateStateMutation.error])
 
   //Dung currying
   const handleChange = (name: keyof FormStateType) => (event: React.ChangeEvent<HTMLInputElement>) => {
     setFormState((prev) => ({ ...prev, [name]: event.target.value }))
-    if (data || error) {
-      reset()
+    if (addStudentMutation.data || addStudentMutation.error) {
+      addStudentMutation.reset()
     }
   }
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  // const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  //   event.preventDefault()
+  //   try {
+  //     const data = await mutateAsync(formState)
+  //     setFormState(initialFormState)
+  //     console.log(data, 'data')
+  //   } catch (error) {
+  //     console.log(error, 'err')
+  //   }
+  // }
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    try {
-      const data = await mutateAsync(formState)
-      setFormState(initialFormState)
-      console.log(data, 'data')
-    } catch (error) {
-      console.log(error, 'err')
+    if (isAddMode) {
+      addStudentMutation.mutate(formState, {
+        onSuccess: () => {
+          toast.success('Add thành công!')
+          setFormState(initialFormState)
+        }
+      })
+    } else {
+      updateStateMutation.mutate(undefined, {
+        onSuccess: (_) => {
+          toast.success('Update thành công!')
+          setFormState(initialFormState)
+        }
+      })
     }
   }
-  // const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-  //   event.preventDefault()
-  //   mutate(formState, {
-  //     onSuccess: () => {
-  //       setFormState(initialFormState)
-  //     }
-  //   })
-  // }
   return (
     <div>
       <h1 className='text-lg font-medium'>{isAddMode ? 'Add Student' : 'Edit Student'}</h1>
@@ -238,7 +269,7 @@ export default function AddStudent() {
           type='submit'
           className='w-full rounded-lg bg-blue-700 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 sm:w-auto'
         >
-          Submit
+          {isAddMode ? 'Add' : 'Update'}
         </button>
       </form>
     </div>
