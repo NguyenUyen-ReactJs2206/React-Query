@@ -1,9 +1,9 @@
 import { useMatch, useParams } from 'react-router-dom'
-import { useMutation, useQuery } from 'react-query'
+import { useMutation, useQuery, useQueryClient } from 'react-query'
 import http from '../../utils/http'
 import { addStudent, getStudent, updateStudent } from '../../apis/students.api'
 import { Student } from '../../types/students.type'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { isAxiosError } from '../../utils/utils'
 import { toast } from 'react-toastify'
 
@@ -23,6 +23,12 @@ type FormError =
       [key in keyof FormStateType]: string
     }
   | null
+
+const gender = {
+  male: 'Male',
+  female: 'Female',
+  other: 'Other'
+}
 export default function AddStudent() {
   const [formState, setFormState] = useState<FormStateType>(initialFormState)
 
@@ -30,7 +36,7 @@ export default function AddStudent() {
   const isAddMode = Boolean(addMatch)
 
   const { id } = useParams()
-
+  const queryClient = useQueryClient()
   const addStudentMutation = useMutation({
     mutationFn: (body: FormStateType) => {
       return addStudent(body)
@@ -38,19 +44,24 @@ export default function AddStudent() {
   })
 
   //start edit
-  useQuery({
+  const studentQuery = useQuery({
     queryKey: ['student', id],
     queryFn: () => getStudent(id as string),
     //khi id co data thi query dc goi
     enabled: id !== undefined,
-    onSuccess: (data) => {
-      setFormState(data.data)
-    }
+    staleTime: 1000 * 10
   })
-
+  useEffect(() => {
+    if (studentQuery.data) {
+      setFormState(studentQuery.data.data)
+    }
+  }, [studentQuery.data])
   //update
   const updateStateMutation = useMutation({
-    mutationFn: (_) => updateStudent(id as string, formState as Student)
+    mutationFn: (_) => updateStudent(id as string, formState as Student),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['student', id], data)
+    }
   })
 
   // sd useMemo de han che viec tinh toan di tinh toan lai
@@ -130,13 +141,13 @@ export default function AddStudent() {
                   id='gender-1'
                   type='radio'
                   name='gender'
-                  value='male'
-                  checked={formState.gender === 'male'}
+                  value={gender.male}
+                  checked={formState.gender === gender.male}
                   onChange={handleChange('gender')}
                   className='h-4 w-4 border-gray-300 bg-gray-100 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-blue-600'
                 />
                 <label htmlFor='gender-1' className='ml-2 text-sm font-medium text-gray-900 dark:text-gray-300'>
-                  Male
+                  {gender.male}
                 </label>
               </div>
               <div className='mb-4 flex items-center'>
@@ -144,13 +155,13 @@ export default function AddStudent() {
                   id='gender-2'
                   type='radio'
                   name='gender'
-                  value='female'
-                  checked={formState.gender === 'female'}
+                  value={gender.female}
+                  checked={formState.gender === gender.female}
                   onChange={handleChange('gender')}
                   className='h-4 w-4 border-gray-300 bg-gray-100 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-blue-600'
                 />
                 <label htmlFor='gender-2' className='ml-2 text-sm font-medium text-gray-900 dark:text-gray-300'>
-                  Female
+                  {gender.female}
                 </label>
               </div>
               <div className='flex items-center'>
@@ -158,13 +169,13 @@ export default function AddStudent() {
                   id='gender-3'
                   type='radio'
                   name='gender'
-                  value='other'
-                  checked={formState.gender === 'other'}
+                  value={gender.other}
+                  checked={formState.gender === gender.other}
                   onChange={handleChange('gender')}
                   className='h-4 w-4 border-gray-300 bg-gray-100 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-blue-600'
                 />
                 <label htmlFor='gender-3' className='ml-2 text-sm font-medium text-gray-900 dark:text-gray-300'>
-                  Other
+                  {gender.other}
                 </label>
               </div>
             </div>

@@ -1,8 +1,8 @@
 import { Fragment, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { deleteStudent, getStudents } from '../../apis/students.api'
+import { deleteStudent, getStudent, getStudents } from '../../apis/students.api'
 import { Students as StudentsType } from '../../types/students.type'
-import { useMutation, useQuery } from 'react-query'
+import { useMutation, useQuery, useQueryClient } from 'react-query'
 import { useQueryString } from '../../utils/utils'
 import classNames from 'classnames'
 import { toast } from 'react-toastify'
@@ -26,6 +26,7 @@ export default function Students() {
   // }, [])
   const queryString: { page?: string } = useQueryString()
   const page = Number(queryString.page) || 1
+  const queryClient = useQueryClient()
 
   const studentsQuery = useQuery({
     queryKey: ['students', page],
@@ -37,6 +38,10 @@ export default function Students() {
     mutationFn: (id: number | string) => deleteStudent(id),
     onSuccess: (_, id) => {
       toast.success(`Delete thành công student với id là ${id}`)
+      queryClient.invalidateQueries({
+        queryKey: ['students', page],
+        exact: true
+      })
     }
   })
 
@@ -45,6 +50,13 @@ export default function Students() {
 
   const handleDelete = (id: number) => {
     deleteStudentMutation.mutate(id)
+  }
+
+  const handlePrefetchStudent = (id: number) => {
+    queryClient.prefetchQuery(['student', String(id)], {
+      queryFn: () => getStudent(id),
+      staleTime: 10 * 1000
+    })
   }
   return (
     <div>
@@ -102,6 +114,7 @@ export default function Students() {
               <tbody>
                 {studentsQuery.data?.data.map((student) => (
                   <tr
+                    onMouseEnter={() => handlePrefetchStudent(student.id)}
                     key={student.id}
                     className='border-b bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-600'
                   >
