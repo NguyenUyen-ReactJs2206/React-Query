@@ -7,6 +7,8 @@ import NotFound from './pages/NotFound'
 import MainLayout from './layouts/MainLayout'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
+import Spinner from './components/Spinner'
+import { useIsFetching, useIsMutating } from 'react-query'
 
 function App() {
   const elements = useRoutes([
@@ -36,8 +38,12 @@ function App() {
     }
   ])
 
+  const isFetching = useIsFetching()
+  const isMutating = useIsMutating()
   return (
     <div className='App'>
+      {isFetching + isMutating !== 0 && <Spinner />}
+
       <ToastContainer />
       <MainLayout>{elements}</MainLayout>
     </div>

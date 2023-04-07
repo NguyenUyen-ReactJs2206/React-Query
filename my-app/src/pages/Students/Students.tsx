@@ -58,6 +58,7 @@ export default function Students() {
       staleTime: 10 * 1000
     })
   }
+
   return (
     <div>
       <h1 className='text-lg'>Students</h1>
